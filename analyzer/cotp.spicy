@@ -1,0 +1,7 @@
+# TODO: Define your analyzer here.
+
+module COTP;
+
+public type Messages = unit {
+    payload: bytes &eod;
+};
