@@ -1,7 +1,142 @@
-# TODO: Define your analyzer here.
+module cotp;
 
-module COTP;
+import spicy;
 
-public type Messages = unit {
-    payload: bytes &eod;
+public type Tpdus = unit {
+    pdus : Tpdu(self.context())[];
+    %context = Context;
+};
+
+# Section 4.2 / Table 8 of the standard: Constants for identifying the TPDU type.
+public type TpduType = enum {
+    ConnectionRequest = 0xe,          # Connection Request (CR) TPDU
+    ConnectionConfirm = 0xd,          # Connection Confirm (CC) TPDU
+    DisconnectRequest = 0x8,          # Disconnect Request (DR) TPDU
+    DisconnectConfirm = 0xc,          # Disconnect Confirm (DC) TPDU
+    Data = 0xf,                       # Data (DT) TPDU
+    ExpeditedData = 0x1,              # Expedited Data (ED) TPDU
+    DataAcknowledge = 0x6,            # Data Acknowledge (AK) TPDU
+    ExpeditedAcknowledge = 0x2,       # Expedited Data Acknowledge (EA) TPDU
+    Reject = 0x5,                     # Reject (RJ) TPDU
+    Error = 0x7,                      # TPDU Error (ER) TPDU
+    UNDEFINED = 0x0                   # Reserved/undefined value
+};
+
+# Section 13.3.4: These constants specify parameter types inside a TPDU.
+type ParameterType = enum {
+    CallingTsap = 0xc1,  # Calling transport service access point
+    CalledTsap = 0xc2,   # Called transport service access point
+};
+
+# Holds contextual information that is maintained throughout parsing a connection/session.
+type Context = struct {
+    class: uint8;                        # Transport protocol class (0, 1, 2, etc.)
+    extended_formats: bool;              # Whether extended formats are enabled
+    no_explicit_flow_control: bool;      # Explicit flow control flag
+    calling_tsap: bytes;                 # Value of the calling TSAP parameter
+    called_tsap: bytes;                  # Value of the called TSAP parameter
+    segments: bytes;                     # Used to temporarily hold segmented user data until EOT
+};
+
+
+# A general representation for parameters which appear in TPDUs after the fixed header.
+type Parameter = unit {
+    code: uint8;                        # Parameter code to indicate its type (see ParameterType)
+    length: uint8;                      # Length of the parameter's value part (in bytes)
+    value: bytes &size=self.length;     # Parameter value of the specified length
+};
+
+type Tpdu = unit(context: Context&) {
+
+    # Holds the reassembled, full payload if user data is segmented.
+    var payload: bytes;
+
+    # TPDU number and End-of-TPDU (EOT) flag for data TPDUs.
+    var tpdu_no: uint8;
+    var eot: bool;
+
+    # Used for acknowledge TPDUs, stores (extended) segment number.
+    var segment_no: uint32;
+
+    length: uint8 &requires=($$ != 255);
+
+    # High 4 bits of the header byte indicate the TPDU type (table 8).
+    _type: uint8 &convert=cast<TpduType>($$ >> 4);
+
+    # Data TPDUs in class 0/1 don't have a destination reference (see 13.7.1),
+    dst_ref: uint16 if(self._type != TpduType::Data || context.class>1);
+
+    switch(self._type) {
+        TpduType::ConnectionRequest, TpduType::ConnectionConfirm -> {
+            # Sections 13.3 and 13.4: Connection Request and Connection Confirm TPDUs
+            src_ref: uint16;
+            class_and_flags: uint8 {
+                context.class = $$>>4;                           # Class in high bits
+                context.extended_formats = !!($$ & 0x2);         # bit 1 indicates extended formats
+                context.no_explicit_flow_control = !!($$ & 0x1); # bit 0 indicates no explicit flow control
+            }
+        }
+        TpduType::DisconnectRequest -> {
+            # Section 13.5: Disconnect Request (DR) TPDU
+            src_ref: uint16;
+            reason: uint8;
+        }
+        TpduType::DisconnectConfirm -> {
+            # Section 13.6: Disconnect Confirm (DC) TPDU
+            src_ref: uint16;
+        }
+        TpduType::Data, TpduType::ExpeditedData -> {
+            # Section 13.7: Data (DT) and Expedited Data (ED) TPDUs
+            tpdu_no_and_eot: uint8 {
+                # Lower 7 bits: TPDU number, highest bit: EOT (End of TPDU)
+                self.tpdu_no = $$ & 0x7f;
+                self.eot = !!($$ & 0x80);
+            }
+        }
+        TpduType::DataAcknowledge, TpduType::ExpeditedAcknowledge, TpduType::Reject -> {
+            # Sections 13.9, 13.10, 13.11: Data Acknowledge (AK), Expedited Acknowledge (EA), and Reject (RJ) TPDUs
+            switch(context.extended_formats) {
+                True -> {
+                    yr_tu_no_ext: uint32 {self.segment_no=$$;}
+                    cdt: uint16;
+                }
+                False -> yr_tu_no: uint16 {self.segment_no=$$;}
+            };
+        }
+        TpduType::Error -> {
+            # Section 13.12: TPDU Error (ER) TPDU
+            reject_cause: uint8;
+        }
+    };
+
+    # Section 13.2.3: Variable parameter part. Present except for:
+    # - Data TPDUs in class 0, and
+    # - Reject TPDUs
+    parameter: Parameter[]
+        &size=(self.length+1-self.offset())
+        if(self._type != TpduType::Reject && (self._type != TpduType::Data || context.class>1));
+
+    # Section 13.7.1: User data structure.
+    # Only present for Data and Connection Confirm TPDUs.
+    user_data: bytes &eod if (self._type in [TpduType::Data, TpduType::ConnectionConfirm]);
+
+    on parameter foreach {
+        local ptype: ParameterType = cast<ParameterType>($$.code);
+        if(ptype==ParameterType::CallingTsap) {
+            context.calling_tsap = $$.value;
+        }
+        if(ptype==ParameterType::CalledTsap) {
+            context.called_tsap = $$.value;
+        }
+    }
+
+    # Handle user data segmentation and reassembly.
+    on user_data {
+        if(self.eot) {
+            self.payload = context.segments+self.user_data;
+            context.segments = b"";
+        } else {
+            context.segments = context.segments+self.user_data;
+        }
+    }
 };

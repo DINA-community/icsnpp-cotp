@@ -1,16 +1,43 @@
-import COTP;
-import Zeek_COTP;
+import cotp;
 
-# TODO: Adjust below how/when the analyzer will be activated. The example
-# defines a well-known port to trigger it. For more information, see:
-#
-#   https://docs.zeek.org/projects/spicy/en/latest/zeek.html#interface-definitions-evt-files
-#
-protocol analyzer COTP over UDP:
-    parse originator with COTP::Messages,
-    parse responder with COTP::Messages;
+protocol analyzer COTP over UDP: parse with cotp::Tpdus;
 
-# TODO: Connect Spicy-side events with Zeek-side events. The example just
-# defines a simple example event that forwards the raw data (which in practice
-# you don't want to do!).
-on COTP::Messages -> event COTP::message($conn, $is_orig, self.payload);
+on cotp::Tpdu ->
+    event cotp::tpdu(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, self._type, context.class
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::ConnectionRequest) -> 
+    event cotp::connection_request(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::ConnectionConfirm) -> 
+    event cotp::connection_confirm(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::DisconnectRequest) -> 
+    event cotp::disconnect_request(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::DisconnectConfirm) -> 
+    event cotp::disconnect_confirm(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::Data) -> 
+    event cotp::data(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class, self.user_data, self.eot, False
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::ExpeditedData) -> 
+    event cotp::data(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class, self.user_data, self.eot, True
+    );
+
+on cotp::Tpdu if (self._type == cotp::TpduType::Error) -> 
+    event cotp::error(
+        $conn, $is_orig, context.calling_tsap, context.called_tsap, context.class, self.reject_cause
+    );

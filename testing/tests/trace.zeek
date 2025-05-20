@@ -1,15 +1,14 @@
-# @TEST-DOC: Test Zeek parsing a trace file through the COTP analyzer.
+# @TEST-DOC: Test Zeek parsing a trace file through the cotp analyzer.
 #
-# @TEST-EXEC: zeek -Cr ${TRACES}/udp-port-12345.pcap ${PACKAGE} %INPUT >output
+# @TEST-EXEC: zeek -Cr ${TRACES}/cotp.pcap ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
-# @TEST-EXEC: btest-diff cotp.log
 
-# TODO: Adapt as suitable. The example only checks the output of the event
-# handlers.
+event zeek_init() &priority=5 {
+    # the script of tpkt are not loaded even if the tpkt plugin is installed
+    Analyzer::register_for_port(Analyzer::ANALYZER_TPKT, 102/tcp);
+}
 
-event COTP::message(c: connection, is_orig: bool, payload: string)
-	{
-	print fmt("Testing COTP: [%s] [orig_h=%s, orig_p=%s, resp_h=%s, resp_p=%s] %s", (
-	    is_orig ? "request" : "reply" ), c$id$orig_h, c$id$orig_p,
-	    c$id$resp_h, c$id$resp_p, payload);
-	}
+event cotp::tpdu(c: connection, is_orig: bool, calling_tsap: string, called_tsap: string, _type: cotp::TpduType, class: int) {
+  print(fmt("Testing cotp: [orig_h=%s, orig_p=%s, resp_h=%s, resp_p=%s] %s | %s | %d | %d",
+	    c$id$orig_h, c$id$orig_p, c$id$resp_h, c$id$resp_p, calling_tsap, called_tsap, _type, class));
+}

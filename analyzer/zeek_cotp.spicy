@@ -1,20 +1,22 @@
-# Set up protocol confirmation/rejection for analyzers, as well as any further
-# Zeek-specific analysis.
+module cotp_Zeek;
 
-module Zeek_COTP;
-
-import COTP;
+import cotp;
 import zeek;
+import spicy;
 
-# TODO: Protocol analyzers should confirm once they are reasonably sure that
-# they are indeed parsing the right protocol. Pick a unit that's a little bit
-# into the parsing process here.
-#
-# on COTP::SUITABLE_UNIT::%done {
-#     zeek::confirm_protocol();
-# }
+public function is_sess_available(): bool &cxxname="is_sess_available";
 
-# Any error bubbling up to the top unit will trigger a protocol rejection.
-on COTP::Messages::%error {
-    zeek::reject_protocol("error while parsing COTP");
+on cotp::Tpdus::%init {
+    if(is_sess_available())
+        zeek::protocol_begin("SESS");
+}
+
+on cotp::Tpdu::user_data {
+    if(is_sess_available() && |self.payload|>0)
+        zeek::protocol_data_in(zeek::is_orig(), self.payload, spicy::Protocol::UDP);
+}
+
+on cotp::Tpdus::%done {
+    if(is_sess_available())
+        zeek::protocol_end();
 }
