@@ -8,8 +8,8 @@ export {
         ts_end:       time    &log;
         uid:          string  &log;
         id:           conn_id &log;
-        calling:      string  &log;
-        called:       string  &log;
+        calling_tsap: string  &log;
+        called_tsap:  string  &log;
         class:        count   &log;
         has_connect:      bool    &log;
         has_disconnect:   bool    &log;
@@ -45,7 +45,7 @@ function create_info(
 ): Info
 {
     return [$ts_start=ts, $ts_end=ts, $uid=c$uid, $id=c$id,
-            $calling=calling, $called=called, $class=class,
+            $calling_tsap=calling, $called_tsap=called, $class=class,
             $has_connect=has_connect, $has_disconnect=has_disconnect,
             $data_pkts=data_pkts, $data_bytes=data_bytes, $error=error,
             $reject_cause=reject_cause];
@@ -58,8 +58,8 @@ event connection_request(c: connection, is_orig: bool, calling: string, called: 
     else {
         c$cotp_state$ts_end = now;
         c$cotp_state$has_connect = T;
-        if ( c$cotp_state$calling == "" ) c$cotp_state$calling = calling;
-        if ( c$cotp_state$called == "" ) c$cotp_state$called = called;
+        if ( c$cotp_state$calling_tsap == "" ) c$cotp_state$calling_tsap = calling;
+        if ( c$cotp_state$called_tsap == "" ) c$cotp_state$called_tsap = called;
         c$cotp_state$class = class;
     }
 }
@@ -70,8 +70,8 @@ event connection_confirm(c: connection, is_orig: bool, calling: string, called: 
         c$cotp_state = create_info(c, calling, called, class, now, F, F, 0, 0, F, 0);
     else {
         c$cotp_state$ts_end = now;
-        if ( c$cotp_state$calling == "" ) c$cotp_state$calling = calling;
-        if ( c$cotp_state$called == "" ) c$cotp_state$called = called;
+        if ( c$cotp_state?$calling_tsap ) c$cotp_state$calling_tsap = calling;
+        if ( c$cotp_state?$called_tsap ) c$cotp_state$called_tsap = called;
         c$cotp_state$class = class;
     }
 }
@@ -83,8 +83,8 @@ event disconnect_request(c: connection, is_orig: bool, calling: string, called: 
     else {
         c$cotp_state$ts_end = now;
         c$cotp_state$has_disconnect = T;
-        if ( c$cotp_state$calling == "" ) c$cotp_state$calling = calling;
-        if ( c$cotp_state$called == "" ) c$cotp_state$called = called;
+        if ( c$cotp_state?$calling_tsap ) c$cotp_state$calling_tsap = calling;
+        if ( c$cotp_state?$called_tsap ) c$cotp_state$called_tsap = called;
         c$cotp_state$class = class;
     }
 }
@@ -96,8 +96,8 @@ event disconnect_confirm(c: connection, is_orig: bool, calling: string, called: 
     else {
         c$cotp_state$ts_end = now;
         c$cotp_state$has_disconnect = T;
-        if ( c$cotp_state$calling == "" ) c$cotp_state$calling = calling;
-        if ( c$cotp_state$called == "" ) c$cotp_state$called = called;
+        if ( c$cotp_state?$calling_tsap ) c$cotp_state$calling_tsap = calling;
+        if ( c$cotp_state?$called_tsap ) c$cotp_state$called_tsap = called;
         c$cotp_state$class = class;
     }
 }
@@ -110,8 +110,8 @@ event data(c: connection, is_orig: bool, calling: string, called: string, class:
         c$cotp_state$ts_end = now;
         c$cotp_state$data_pkts += 1;
         c$cotp_state$data_bytes += |user_data|;
-        if ( c$cotp_state$calling == "" ) c$cotp_state$calling = calling;
-        if ( c$cotp_state$called == "" ) c$cotp_state$called = called;
+        if ( c$cotp_state?$calling_tsap ) c$cotp_state$calling_tsap = calling;
+        if ( c$cotp_state?$called_tsap ) c$cotp_state$called_tsap = called;
         c$cotp_state$class = class;
     }
 }
