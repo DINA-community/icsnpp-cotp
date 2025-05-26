@@ -1,3 +1,35 @@
-This plugin provides a protocol analyzer for COTP (ISO 8073 / X.224) for use
-within Zeek. The analyzer enables Zeek to parse COTP PDUs and trigger further
-protocol parsing of SESSION SPDUs, if the SESS analyzer is available.
+# ICSNPP-COTP
+
+Industrial Control Systems Network Protocol Parsers (ICSNPP) - Connection-Oriented Transport Protocol (COTP)
+
+## Overview
+
+This plugin provides a protocol analyzer for the OSI Connection-Oriented Transport Protocol (COTP) (ISO 8073
+/ X.224) for use within Zeek.
+
+## Dependencies
+
+COTP is dependent on [TPKT](https://github.com/DINA-community/icsnpp-tpkt),
+which must also be installed.
+In addition, zeek must support spicy.
+
+## Installation
+
+### Package Manager
+
+This script is available as a package for [Zeek Package Manager](https://docs.zeek.org/projects/package-manager/en/stable/index.html).
+
+```bash
+zkg refresh
+zkg install cotp
+```
+
+If this package is installed from ZKG, it will be added to the available plugins. This can be tested by running `zeek -NN`. If installed correctly, users will see `ANALYZER_COTP` under the list of plugins.
+
+If users have ZKG configured to load packages (see `@load packages` in the( [ZKG Quickstart Guide](https://docs.zeek.org/projects/package-manager/en/stable/quickstart.html)), this plugin and these scripts will automatically be loaded and ready to go.)
+
+## License
+
+The software was developed on behalf of the BSI (Federal Office for Information Security)
+
+Copyright (c) 2025 by DINA-Community BSD 3-Clause. [See License](/COPYING)
