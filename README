@@ -15,8 +15,6 @@ In addition, zeek must support spicy.
 
 ## Installation
 
-### Package Manager
-
 This script is available as a package for [Zeek Package Manager](https://docs.zeek.org/projects/package-manager/en/stable/index.html).
 
 ```bash
@@ -50,6 +48,10 @@ One dataset is logged for each cotp connection containing the following fields.
 | data_bytes        | count     | Total number of payload bytes                                     |
 | error             | bool      | True if an error pdu was received else false                      |
 | reject_cause      | bool      | cause if the error; only valid if error is true                   |
+
+## Limitations
+
+Payload extraction is only supported for class 0. Higher layers are therefore only called when class 0 is used.
 
 ## License
 

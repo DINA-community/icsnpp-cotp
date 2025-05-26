@@ -132,11 +132,13 @@ type Tpdu = unit(context: Context&) {
 
     # Handle user data segmentation and reassembly.
     on user_data {
-        if(self.eot) {
-            self.payload = context.segments+self.user_data;
-            context.segments = b"";
-        } else {
-            context.segments = context.segments+self.user_data;
+        # payload extraction is only supproted for class 0
+        if(context.class == 0) {
+            context.segments += self.user_data;
+            if(self.eot) {
+                self.payload = context.segments;
+                context.segments = b"";
+            }
         }
     }
 };
