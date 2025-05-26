@@ -2,9 +2,16 @@
 #
 # @TEST-EXEC: zeek -Cr ${TRACES}/cotp.pcap ${PACKAGE} %INPUT >output
 # @TEST-EXEC: btest-diff output
+#
+# @TEST-EXEC: zeek -Cr ${TRACES}/cotp2.pcapng ${PACKAGE} %INPUT >output2
+# @TEST-EXEC: btest-diff output2
+#
+# @TEST-EXEC: zeek -Cr ${TRACES}/s7comm_downloading_block_db1.pcap ${PACKAGE} %INPUT >s7_1
+# @TEST-EXEC: btest-diff s7_1
+
 
 event zeek_init() &priority=5 {
-    # the script of tpkt are not loaded even if the tpkt plugin is installed
+    # the script of tpkt is not loaded even if the tpkt plugin is installed
     Analyzer::register_for_port(Analyzer::ANALYZER_TPKT, 102/tcp);
 }
 
