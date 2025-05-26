@@ -108,7 +108,7 @@ event data(c: connection, is_orig: bool, calling: string, called: string, class:
         c$cotp_state = create_info(c, calling, called, class, now, F, F, 1, |user_data|, F, 0);
     else {
         c$cotp_state$ts_end = now;
-        c$cotp_state$data_pkts += 1;
+        if ( eot ) c$cotp_state$data_pkts += 1;
         c$cotp_state$data_bytes += |user_data|;
         if ( c$cotp_state?$calling_tsap ) c$cotp_state$calling_tsap = calling;
         if ( c$cotp_state?$called_tsap ) c$cotp_state$called_tsap = called;
