@@ -4,5 +4,5 @@
 
 sed -E 's/(0\.000000)|([0-9]{9,10}\.[0-9]{2,8})/XXXXXXXXXX.XXXXXX/g' |
     sed -E 's/^ *#(open|close).(19|20)..-..-..-..-..-..$/#\1 XXXX-XX-XX-XX-XX-XX/g' |
-        sed 's/\bclass_:[[:space:]]*0\b/class: 0/g' #  change class_ to class in test output.
-
+        sed 's/\bclass_:[[:space:]]*0\b/class: 0/g' | #  change class_ to class in test output.
+            grep -v "(unset)" # Canonify the output of the Spicy Dump, which differs between Zeek 8 and Zeek 9.
